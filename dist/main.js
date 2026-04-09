@@ -13,7 +13,7 @@ async function bootstrap() {
         transform: true,
         transformOptions: { enableImplicitConversion: true },
     }));
-    const port = process.env.PORT ?? '8000';
+    const port = process.env.PORT ?? "3000";
     await app.listen(Number(port));
     console.log(`Server running on http://localhost:${port}`);
 }
