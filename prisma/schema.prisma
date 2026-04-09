@@ -7,19 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Authenticated accounts (register / login). Passwords stored as bcrypt hashes only.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("farmer")
+  name         String
+  phone        String?
+  location     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  procurements Procurement[]
+  sales        Sale[]
+}
+
+/// Harvests (farm intake). Maps to frontend "Farm" module; quantity = tonnes.
 model Procurement {
-  id        Int      @id @default(autoincrement())
-  produce   String
-  quantity  Float
-  price     Float
-  date      DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  produce      String
+  quantity     Float
+  price        Float
+  farmLocation String?
+  userId       String?
+  date         DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Sale {
-  id        Int      @id @default(autoincrement())
-  produce   String
-  quantity  Float
-  amount    Float
-  buyer     String
-  date      DateTime @default(now())
+  id             Int       @id @default(autoincrement())
+  produce        String
+  quantity       Float
+  amount         Float
+  buyer          String
+  paymentStatus  String    @default("paid")
+  amountPaid     Float?
+  creditDueDate  DateTime?
+  userId         String?
+  date           DateTime  @default(now())
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
