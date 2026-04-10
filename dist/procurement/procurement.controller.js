@@ -16,6 +16,7 @@ exports.ProcurementController = void 0;
 const common_1 = require("@nestjs/common");
 const procurement_service_1 = require("./procurement.service");
 const create_procurement_dto_1 = require("./dto/create-procurement.dto");
+const update_procurement_dto_1 = require("./dto/update-procurement.dto");
 const procurement_query_dto_1 = require("./dto/procurement-query.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
@@ -28,6 +29,12 @@ let ProcurementController = class ProcurementController {
     }
     create(dto, user) {
         return this.procurementService.create(dto, user);
+    }
+    update(id, dto, user) {
+        return this.procurementService.update(id, dto, user);
+    }
+    remove(id, user) {
+        return this.procurementService.remove(id, user);
     }
 };
 exports.ProcurementController = ProcurementController;
@@ -47,6 +54,23 @@ __decorate([
     __metadata("design:paramtypes", [create_procurement_dto_1.CreateProcurementDto, Object]),
     __metadata("design:returntype", void 0)
 ], ProcurementController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, update_procurement_dto_1.UpdateProcurementDto, Object]),
+    __metadata("design:returntype", void 0)
+], ProcurementController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", void 0)
+], ProcurementController.prototype, "remove", null);
 exports.ProcurementController = ProcurementController = __decorate([
     (0, common_1.Controller)('api/procurements'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

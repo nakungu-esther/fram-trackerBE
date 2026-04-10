@@ -16,6 +16,8 @@ exports.SaleController = void 0;
 const common_1 = require("@nestjs/common");
 const sale_service_1 = require("./sale.service");
 const create_sale_dto_1 = require("./dto/create-sale.dto");
+const patch_sale_dto_1 = require("./dto/patch-sale.dto");
+const confirm_sui_dto_1 = require("./dto/confirm-sui.dto");
 const sale_query_dto_1 = require("./dto/sale-query.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
@@ -28,6 +30,12 @@ let SaleController = class SaleController {
     }
     create(dto, user) {
         return this.saleService.create(dto, user);
+    }
+    patch(id, dto, user) {
+        return this.saleService.patch(id, dto, user);
+    }
+    confirmSui(id, dto, user) {
+        return this.saleService.confirmSuiPayment(id, dto.digest.trim(), user);
     }
 };
 exports.SaleController = SaleController;
@@ -47,6 +55,24 @@ __decorate([
     __metadata("design:paramtypes", [create_sale_dto_1.CreateSaleDto, Object]),
     __metadata("design:returntype", void 0)
 ], SaleController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, patch_sale_dto_1.PatchSaleDto, Object]),
+    __metadata("design:returntype", void 0)
+], SaleController.prototype, "patch", null);
+__decorate([
+    (0, common_1.Post)(':id/confirm-sui'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, confirm_sui_dto_1.ConfirmSuiDto, Object]),
+    __metadata("design:returntype", void 0)
+], SaleController.prototype, "confirmSui", null);
 exports.SaleController = SaleController = __decorate([
     (0, common_1.Controller)('api/sales'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

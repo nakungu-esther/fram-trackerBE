@@ -32,6 +32,16 @@ let ProcurementService = class ProcurementService {
             orderBy: { date: 'desc' },
         });
     }
+    async assertFarmOwned(farmId, userId) {
+        if (!farmId)
+            return;
+        const farm = await this.prisma.farm.findFirst({
+            where: { id: farmId, userId },
+        });
+        if (!farm) {
+            throw new common_1.ForbiddenException('Farm not found or not owned by this user');
+        }
+    }
     async create(dto, auth) {
         if (auth.role === 'trader') {
             throw new common_1.ForbiddenException('Traders cannot record harvests');
@@ -44,6 +54,8 @@ let ProcurementService = class ProcurementService {
             userId = auth.userId;
         }
         const price = dto.price ?? 0;
+        const farmId = dto.farmId?.trim() || null;
+        await this.assertFarmOwned(farmId, userId);
         return this.prisma.procurement.create({
             data: {
                 produce: dto.produce.trim(),
@@ -51,9 +63,53 @@ let ProcurementService = class ProcurementService {
                 price,
                 farmLocation: dto.farmLocation?.trim() || null,
                 userId,
+                farmId,
                 ...(dto.date ? { date: new Date(dto.date) } : {}),
             },
         });
+    }
+    async update(id, dto, auth) {
+        const row = await this.prisma.procurement.findUnique({ where: { id } });
+        if (!row)
+            throw new common_1.NotFoundException('Procurement not found');
+        if (auth.role !== 'admin' && row.userId !== auth.userId) {
+            throw new common_1.ForbiddenException();
+        }
+        if (dto.farmId !== undefined) {
+            const trimmed = dto.farmId?.trim() || null;
+            if (trimmed) {
+                await this.assertFarmOwned(trimmed, row.userId || auth.userId);
+            }
+        }
+        const data = {};
+        if (dto.produce !== undefined)
+            data.produce = dto.produce.trim();
+        if (dto.quantity !== undefined)
+            data.quantity = dto.quantity;
+        if (dto.farmLocation !== undefined) {
+            data.farmLocation = dto.farmLocation?.trim() || null;
+        }
+        if (dto.date !== undefined)
+            data.date = new Date(dto.date);
+        if (dto.farmId !== undefined) {
+            const trimmed = dto.farmId?.trim() || null;
+            data.farm = trimmed
+                ? { connect: { id: trimmed } }
+                : { disconnect: true };
+        }
+        return this.prisma.procurement.update({
+            where: { id },
+            data,
+        });
+    }
+    async remove(id, auth) {
+        const row = await this.prisma.procurement.findUnique({ where: { id } });
+        if (!row)
+            throw new common_1.NotFoundException('Procurement not found');
+        if (auth.role !== 'admin' && row.userId !== auth.userId) {
+            throw new common_1.ForbiddenException();
+        }
+        await this.prisma.procurement.delete({ where: { id } });
     }
 };
 exports.ProcurementService = ProcurementService;

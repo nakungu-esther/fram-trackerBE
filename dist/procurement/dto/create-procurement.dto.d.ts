@@ -5,4 +5,5 @@ export declare class CreateProcurementDto {
     farmLocation?: string;
     userId?: string;
     date?: string;
+    farmId?: string;
 }

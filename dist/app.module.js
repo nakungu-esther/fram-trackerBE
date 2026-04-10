@@ -14,6 +14,12 @@ const prisma_module_1 = require("./prisma/prisma.module");
 const procurement_module_1 = require("./procurement/procurement.module");
 const sale_module_1 = require("./sale/sale.module");
 const auth_module_1 = require("./auth/auth.module");
+const farm_module_1 = require("./farm/farm.module");
+const expense_module_1 = require("./expense/expense.module");
+const seasonal_plan_module_1 = require("./seasonal-plan/seasonal-plan.module");
+const supply_chain_module_1 = require("./supply-chain/supply-chain.module");
+const notification_read_module_1 = require("./notification-read/notification-read.module");
+const sms_log_module_1 = require("./sms-log/sms-log.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -27,6 +33,12 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             procurement_module_1.ProcurementModule,
             sale_module_1.SaleModule,
+            farm_module_1.FarmModule,
+            expense_module_1.ExpenseModule,
+            seasonal_plan_module_1.SeasonalPlanModule,
+            supply_chain_module_1.SupplyChainModule,
+            notification_read_module_1.NotificationReadModule,
+            sms_log_module_1.SmsLogModule,
         ],
         controllers: [app_controller_1.AppController],
     })

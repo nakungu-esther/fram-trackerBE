@@ -20,16 +20,17 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  private toPublicUser(user: User) {
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-      phone: user.phone ?? '',
-      location: user.location ?? '',
-    };
-  }
+ private toPublicUser(user: User) {
+ return {
+ id: user.id,
+ email: user.email,
+ role: user.role,
+ name: user.name,
+ phone: user.phone ?? '',
+ location: user.location ?? '',
+ suiAddress: user.suiAddress ?? '',
+ };
+ }
 
   private signToken(user: User): string {
     const payload: JwtPayload = {
@@ -84,19 +85,22 @@ export class AuthService {
     return this.toPublicUser(user);
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(dto.name != null ? { name: dto.name.trim() } : {}),
-        ...(dto.phone !== undefined
-          ? { phone: dto.phone.trim() || null }
-          : {}),
-        ...(dto.location !== undefined
-          ? { location: dto.location.trim() || null }
-          : {}),
-      },
-    });
-    return this.toPublicUser(user);
-  }
+ async updateProfile(userId: string, dto: UpdateProfileDto) {
+ const user = await this.prisma.user.update({
+ where: { id: userId },
+ data: {
+ ...(dto.name != null ? { name: dto.name.trim() } : {}),
+ ...(dto.phone !== undefined
+ ? { phone: dto.phone.trim() || null }
+ : {}),
+ ...(dto.location !== undefined
+ ? { location: dto.location.trim() || null }
+ : {}),
+ ...(dto.suiAddress !== undefined
+ ? { suiAddress: dto.suiAddress.trim() || null }
+ : {}),
+ },
+ });
+ return this.toPublicUser(user);
+ }
 }

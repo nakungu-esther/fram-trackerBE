@@ -1,5 +1,6 @@
 import { ProcurementService } from './procurement.service';
 import { CreateProcurementDto } from './dto/create-procurement.dto';
+import { UpdateProcurementDto } from './dto/update-procurement.dto';
 import { ProcurementQueryDto } from './dto/procurement-query.dto';
 import type { AuthUser } from '../auth/auth-user.interface';
 export declare class ProcurementController {
@@ -12,6 +13,7 @@ export declare class ProcurementController {
         farmLocation: string | null;
         userId: string | null;
         date: Date;
+        farmId: string | null;
         id: number;
     }[]>;
     create(dto: CreateProcurementDto, user: AuthUser): Promise<{
@@ -21,6 +23,18 @@ export declare class ProcurementController {
         farmLocation: string | null;
         userId: string | null;
         date: Date;
+        farmId: string | null;
         id: number;
     }>;
+    update(id: number, dto: UpdateProcurementDto, user: AuthUser): Promise<{
+        produce: string;
+        quantity: number;
+        price: number;
+        farmLocation: string | null;
+        userId: string | null;
+        date: Date;
+        farmId: string | null;
+        id: number;
+    }>;
+    remove(id: number, user: AuthUser): Promise<void>;
 }

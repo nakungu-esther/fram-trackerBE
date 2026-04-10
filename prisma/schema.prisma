@@ -16,23 +16,51 @@ model User {
   name         String
   phone        String?
   location     String?
+  suiAddress   String?
+  /// Max total outstanding credit (UGX) for this trader; raise via admin/DB for trusted buyers.
+  creditLimitUgx Float    @default(1000000)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   procurements Procurement[]
-  sales        Sale[]
+  sales             Sale[]
+  salesAsBuyer      Sale[] @relation("BuyerSales")
+  farms             Farm[]
+  expenses          Expense[]
+  seasonalPlans     SeasonalPlan[]
+  supplyChainEvents SupplyChainEvent[]
+  notificationReads NotificationRead[]
+  smsLogs           SmsLog[]
 }
 
-/// Harvests (farm intake). Maps to frontend "Farm" module; quantity = tonnes.
+model Farm {
+  id String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  procurements  Procurement[]
+  seasonalPlans SeasonalPlan[]
+}
+
+/// Harvests (farm intake). Maps to frontend produce entries; quantity = tonnes.
 model Procurement {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   produce      String
   quantity     Float
   price        Float
   farmLocation String?
   userId       String?
-  date         DateTime @default(now())
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  farmId       String?
+  date         DateTime  @default(now())
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  farm         Farm?     @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  sales        Sale[]
 }
 
 model Sale {
@@ -41,10 +69,75 @@ model Sale {
   quantity       Float
   amount         Float
   buyer          String
+  /// pending | paid | partial | credit — pending = awaiting Sui (or manual confirm).
   paymentStatus  String    @default("paid")
   amountPaid     Float?
   creditDueDate  DateTime?
+  /// sui = on-chain settlement expected; credit = debt; manual = recorded cash/offline.
+  settlementMethod String?
+  suiTxDigest    String?   @unique
+  /// Trader account that initiated the purchase (marketplace); farmers/admins may leave null.
+  buyerUserId    String?
+  buyerUser      User?     @relation("BuyerSales", fields: [buyerUserId], references: [id], onDelete: SetNull)
+  procurementId  Int?
+  procurement    Procurement? @relation(fields: [procurementId], references: [id], onDelete: SetNull)
   userId         String?
   date           DateTime  @default(now())
   user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  amount    Float
+  date      DateTime
+  createdAt DateTime @default(now())
+}
+
+model SeasonalPlan {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crop                String
+  plantDate           DateTime
+  expectedHarvestDate DateTime
+  farmId              String?
+  farm                Farm?    @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  notes               String?
+  createdAt           DateTime @default(now())
+}
+
+/// Supply-chain step; saleId matches client sale id (e.g. api-7 or local s-…).
+model SupplyChainEvent {
+  id        String   @id @default(cuid())
+  saleId    String
+  stage     String
+  note      String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  at        DateTime @default(now())
+}
+
+/// Dismissed / read in-app notifications (keys match computed notification ids in the UI).
+model NotificationRead {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  readAt    DateTime @default(now())
+
+  @@unique([userId, key])
+}
+
+/// SMS preview log (farmer-centric: userId = account that owns the row).
+model SmsLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  to        String
+  body      String
+  kind      String
+  at        DateTime @default(now())
 }

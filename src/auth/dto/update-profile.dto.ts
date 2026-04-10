@@ -15,4 +15,9 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(200)
   location?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  suiAddress?: string;
 }

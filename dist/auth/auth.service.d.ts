@@ -17,6 +17,7 @@ export declare class AuthService {
             name: string;
             phone: string;
             location: string;
+            suiAddress: string;
         };
     }>;
     login(email: string, password: string): Promise<{
@@ -28,6 +29,7 @@ export declare class AuthService {
             name: string;
             phone: string;
             location: string;
+            suiAddress: string;
         };
     }>;
     validateUserPayload(userId: string): Promise<{
@@ -37,6 +39,7 @@ export declare class AuthService {
         name: string;
         phone: string;
         location: string;
+        suiAddress: string;
     }>;
     updateProfile(userId: string, dto: UpdateProfileDto): Promise<{
         id: string;
@@ -45,5 +48,6 @@ export declare class AuthService {
         name: string;
         phone: string;
         location: string;
+        suiAddress: string;
     }>;
 }

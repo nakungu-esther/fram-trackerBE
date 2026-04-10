@@ -15,6 +15,7 @@ export declare class AuthController {
             name: string;
             phone: string;
             location: string;
+            suiAddress: string;
         };
     }>;
     login(dto: LoginDto): Promise<{
@@ -26,6 +27,7 @@ export declare class AuthController {
             name: string;
             phone: string;
             location: string;
+            suiAddress: string;
         };
     }>;
     me(user: AuthUser): Promise<{
@@ -35,6 +37,7 @@ export declare class AuthController {
         name: string;
         phone: string;
         location: string;
+        suiAddress: string;
     }>;
     patchProfile(user: AuthUser, dto: UpdateProfileDto): Promise<{
         id: string;
@@ -43,5 +46,6 @@ export declare class AuthController {
         name: string;
         phone: string;
         location: string;
+        suiAddress: string;
     }>;
 }

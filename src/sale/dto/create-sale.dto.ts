@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsDateString,
   IsIn,
+  IsInt,
 } from 'class-validator';
 
 export class CreateSaleDto {
@@ -27,8 +28,13 @@ export class CreateSaleDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['paid', 'partial', 'credit'])
-  paymentStatus?: 'paid' | 'partial' | 'credit';
+  @IsIn(['pending', 'paid', 'partial', 'credit'])
+  paymentStatus?: 'pending' | 'paid' | 'partial' | 'credit';
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['sui', 'credit', 'manual'])
+  settlementMethod?: 'sui' | 'credit' | 'manual';
 
   @IsOptional()
   @IsNumber()
@@ -42,6 +48,11 @@ export class CreateSaleDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  procurementId?: number;
 
   @IsOptional()
   @IsDateString()

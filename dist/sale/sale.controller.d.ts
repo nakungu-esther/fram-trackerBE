@@ -1,5 +1,7 @@
 import { SaleService } from './sale.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { PatchSaleDto } from './dto/patch-sale.dto';
+import { ConfirmSuiDto } from './dto/confirm-sui.dto';
 import { SaleQueryDto } from './dto/sale-query.dto';
 import type { AuthUser } from '../auth/auth-user.interface';
 export declare class SaleController {
@@ -14,8 +16,12 @@ export declare class SaleController {
         amount: number;
         buyer: string;
         paymentStatus: string;
+        settlementMethod: string | null;
         amountPaid: number | null;
         creditDueDate: Date | null;
+        procurementId: number | null;
+        suiTxDigest: string | null;
+        buyerUserId: string | null;
     }[]>;
     create(dto: CreateSaleDto, user: AuthUser): Promise<{
         produce: string;
@@ -26,7 +32,43 @@ export declare class SaleController {
         amount: number;
         buyer: string;
         paymentStatus: string;
+        settlementMethod: string | null;
         amountPaid: number | null;
         creditDueDate: Date | null;
+        procurementId: number | null;
+        suiTxDigest: string | null;
+        buyerUserId: string | null;
+    }>;
+    patch(id: number, dto: PatchSaleDto, user: AuthUser): Promise<{
+        produce: string;
+        quantity: number;
+        userId: string | null;
+        date: Date;
+        id: number;
+        amount: number;
+        buyer: string;
+        paymentStatus: string;
+        settlementMethod: string | null;
+        amountPaid: number | null;
+        creditDueDate: Date | null;
+        procurementId: number | null;
+        suiTxDigest: string | null;
+        buyerUserId: string | null;
+    }>;
+    confirmSui(id: number, dto: ConfirmSuiDto, user: AuthUser): Promise<{
+        produce: string;
+        quantity: number;
+        userId: string | null;
+        date: Date;
+        id: number;
+        amount: number;
+        buyer: string;
+        paymentStatus: string;
+        settlementMethod: string | null;
+        amountPaid: number | null;
+        creditDueDate: Date | null;
+        procurementId: number | null;
+        suiTxDigest: string | null;
+        buyerUserId: string | null;
     }>;
 }

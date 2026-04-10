@@ -32,4 +32,8 @@ export class CreateProcurementDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @IsOptional()
+  @IsString()
+  farmId?: string;
 }

@@ -61,6 +61,7 @@ let AuthService = class AuthService {
             name: user.name,
             phone: user.phone ?? '',
             location: user.location ?? '',
+            suiAddress: user.suiAddress ?? '',
         };
     }
     signToken(user) {
@@ -123,6 +124,9 @@ let AuthService = class AuthService {
                     : {}),
                 ...(dto.location !== undefined
                     ? { location: dto.location.trim() || null }
+                    : {}),
+                ...(dto.suiAddress !== undefined
+                    ? { suiAddress: dto.suiAddress.trim() || null }
                     : {}),
             },
         });

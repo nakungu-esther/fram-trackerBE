@@ -3,9 +3,11 @@ export declare class CreateSaleDto {
     quantity: number;
     amount: number;
     buyer: string;
-    paymentStatus?: 'paid' | 'partial' | 'credit';
+    paymentStatus?: 'pending' | 'paid' | 'partial' | 'credit';
+    settlementMethod?: 'sui' | 'credit' | 'manual';
     amountPaid?: number;
     creditDueDate?: string;
     userId?: string;
+    procurementId?: number;
     date?: string;
 }

@@ -32,4 +32,10 @@ __decorate([
     (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], UpdateProfileDto.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(128),
+    __metadata("design:type", String)
+], UpdateProfileDto.prototype, "suiAddress", void 0);
 //# sourceMappingURL=update-profile.dto.js.map
