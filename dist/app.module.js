@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const throttler_1 = require("@nestjs/throttler");
 const app_controller_1 = require("./app.controller");
 const prisma_module_1 = require("./prisma/prisma.module");
+const audit_log_module_1 = require("./audit-log/audit-log.module");
 const procurement_module_1 = require("./procurement/procurement.module");
 const sale_module_1 = require("./sale/sale.module");
 const auth_module_1 = require("./auth/auth.module");
@@ -20,6 +21,7 @@ const seasonal_plan_module_1 = require("./seasonal-plan/seasonal-plan.module");
 const supply_chain_module_1 = require("./supply-chain/supply-chain.module");
 const notification_read_module_1 = require("./notification-read/notification-read.module");
 const sms_log_module_1 = require("./sms-log/sms-log.module");
+const farm_daily_log_module_1 = require("./farm-daily-log/farm-daily-log.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -30,6 +32,7 @@ exports.AppModule = AppModule = __decorate([
                 throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }],
             }),
             prisma_module_1.PrismaModule,
+            audit_log_module_1.AuditLogModule,
             auth_module_1.AuthModule,
             procurement_module_1.ProcurementModule,
             sale_module_1.SaleModule,
@@ -39,6 +42,7 @@ exports.AppModule = AppModule = __decorate([
             supply_chain_module_1.SupplyChainModule,
             notification_read_module_1.NotificationReadModule,
             sms_log_module_1.SmsLogModule,
+            farm_daily_log_module_1.FarmDailyLogModule,
         ],
         controllers: [app_controller_1.AppController],
     })

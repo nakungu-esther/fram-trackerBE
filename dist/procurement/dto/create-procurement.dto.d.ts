@@ -6,4 +6,5 @@ export declare class CreateProcurementDto {
     userId?: string;
     date?: string;
     farmId?: string;
+    photoDataUrl?: string | null;
 }

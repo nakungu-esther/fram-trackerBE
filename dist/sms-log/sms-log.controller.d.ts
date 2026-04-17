@@ -5,17 +5,17 @@ export declare class SmsLogController {
     private readonly smsLogService;
     constructor(smsLogService: SmsLogService);
     findAll(user: AuthUser): Promise<{
-        userId: string;
         id: string;
         at: Date;
+        userId: string;
         to: string;
         body: string;
         kind: string;
     }[]>;
     create(dto: CreateSmsLogDto, user: AuthUser): Promise<{
-        userId: string;
         id: string;
         at: Date;
+        userId: string;
         to: string;
         body: string;
         kind: string;

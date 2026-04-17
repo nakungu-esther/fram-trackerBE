@@ -10,11 +10,13 @@ exports.SaleModule = void 0;
 const common_1 = require("@nestjs/common");
 const sale_service_1 = require("./sale.service");
 const sale_controller_1 = require("./sale.controller");
+const sui_module_1 = require("../sui/sui.module");
 let SaleModule = class SaleModule {
 };
 exports.SaleModule = SaleModule;
 exports.SaleModule = SaleModule = __decorate([
     (0, common_1.Module)({
+        imports: [sui_module_1.SuiModule],
         controllers: [sale_controller_1.SaleController],
         providers: [sale_service_1.SaleService],
     })

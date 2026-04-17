@@ -12,6 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SaleService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const audit_log_service_1 = require("../audit-log/audit-log.service");
+const sale_audit_util_1 = require("./sale-audit.util");
+const sui_verification_service_1 = require("../sui/sui-verification.service");
 function normalizeAmountPaid(total, paymentStatus, amountPaidRaw) {
     if (paymentStatus === 'pending')
         return 0;
@@ -27,8 +30,34 @@ function normalizeAmountPaid(total, paymentStatus, amountPaidRaw) {
     return paid;
 }
 let SaleService = class SaleService {
-    constructor(prisma) {
+    constructor(prisma, audit, suiVerification) {
         this.prisma = prisma;
+        this.audit = audit;
+        this.suiVerification = suiVerification;
+    }
+    async assertStockAvailable(farmerUserId, produce, additionalQty) {
+        if (additionalQty <= 0) {
+            throw new common_1.BadRequestException('Sale quantity must be positive');
+        }
+        const p = produce.trim();
+        const harvests = await this.prisma.procurement.findMany({
+            where: {
+                userId: farmerUserId,
+                produce: { equals: p, mode: 'insensitive' },
+            },
+        });
+        const sales = await this.prisma.sale.findMany({
+            where: {
+                userId: farmerUserId,
+                produce: { equals: p, mode: 'insensitive' },
+            },
+        });
+        const h = harvests.reduce((s, x) => s + x.quantity, 0);
+        const sold = sales.reduce((s, x) => s + x.quantity, 0);
+        const avail = h - sold;
+        if (avail + 1e-9 < additionalQty) {
+            throw new common_1.BadRequestException(`Insufficient stock for "${p}". Available ~${avail.toFixed(3)} t; this sale is ${additionalQty} t.`);
+        }
     }
     async assertCreditHeadroom(buyerUserId, additionalUgx) {
         const user = await this.prisma.user.findUnique({
@@ -102,6 +131,12 @@ let SaleService = class SaleService {
         else {
             userId = auth.userId;
         }
+        if (dto.quantity <= 0 || !Number.isFinite(dto.quantity)) {
+            throw new common_1.BadRequestException('Sale quantity must be greater than zero');
+        }
+        if (dto.amount < 0 || !Number.isFinite(dto.amount)) {
+            throw new common_1.BadRequestException('Sale amount cannot be negative');
+        }
         const paymentStatus = dto.paymentStatus ?? 'paid';
         let settlementMethod = dto.settlementMethod ??
             (paymentStatus === 'credit'
@@ -133,8 +168,17 @@ let SaleService = class SaleService {
                 throw new common_1.BadRequestException('procurementId does not match this farmer listing.');
             }
         }
+        await this.assertStockAvailable(userId, dto.produce, dto.quantity);
+        if (settlementMethod === 'sui') {
+            const farmerRow = await this.prisma.user.findUnique({
+                where: { id: userId },
+            });
+            if (!farmerRow?.suiAddress?.trim()) {
+                throw new common_1.BadRequestException('Sui settlement requires the farmer to save a Sui wallet address on their profile first.');
+            }
+        }
         const paid = normalizeAmountPaid(dto.amount, paymentStatus, dto.amountPaid);
-        return this.prisma.sale.create({
+        const created = await this.prisma.sale.create({
             data: {
                 produce: dto.produce.trim(),
                 quantity: dto.quantity,
@@ -147,9 +191,19 @@ let SaleService = class SaleService {
                 userId,
                 buyerUserId,
                 procurementId: dto.procurementId ?? null,
+                createdByUserId: auth.userId,
+                lastUpdatedByUserId: auth.userId,
                 ...(dto.date ? { date: new Date(dto.date) } : {}),
             },
         });
+        await this.audit.record({
+            action: 'CREATE_SALE',
+            entityType: 'Sale',
+            entityId: String(created.id),
+            auth,
+            newValue: (0, sale_audit_util_1.snapshotSale)(created),
+        });
+        return created;
     }
     async confirmSuiPayment(id, digest, auth) {
         const row = await this.prisma.sale.findUnique({ where: { id } });
@@ -167,14 +221,34 @@ let SaleService = class SaleService {
         if (dup) {
             throw new common_1.BadRequestException('This transaction digest is already linked to another sale.');
         }
-        return this.prisma.sale.update({
+        const farmerId = row.userId;
+        if (!farmerId) {
+            throw new common_1.BadRequestException('Sale has no farmer account linked; cannot verify on-chain payment.');
+        }
+        await this.suiVerification.assertSalePaymentDigest({
+            digest,
+            farmerUserId: farmerId,
+            buyerUserId: row.buyerUserId,
+        });
+        const before = (0, sale_audit_util_1.snapshotSale)(row);
+        const updated = await this.prisma.sale.update({
             where: { id },
             data: {
                 paymentStatus: 'paid',
                 amountPaid: row.amount,
                 suiTxDigest: digest,
+                lastUpdatedByUser: { connect: { id: auth.userId } },
             },
         });
+        await this.audit.record({
+            action: 'CONFIRM_SUI_SALE',
+            entityType: 'Sale',
+            entityId: String(id),
+            auth,
+            oldValue: before,
+            newValue: (0, sale_audit_util_1.snapshotSale)(updated),
+        });
+        return updated;
     }
     async patch(id, dto, auth) {
         const row = await this.prisma.sale.findUnique({ where: { id } });
@@ -190,7 +264,36 @@ let SaleService = class SaleService {
         else if (row.userId !== auth.userId) {
             throw new common_1.ForbiddenException();
         }
-        const data = {};
+        if ((0, sale_audit_util_1.isSaleLocked)(row)) {
+            throw new common_1.BadRequestException('This sale is finalized (fully paid or verified on-chain). Direct edits are disabled — record a separate adjustment or reversal entry instead.');
+        }
+        if (dto.amountPaid !== undefined && dto.amountPaid < 0) {
+            throw new common_1.BadRequestException('amountPaid cannot be negative');
+        }
+        if (dto.suiTxDigest !== undefined &&
+            dto.suiTxDigest !== null &&
+            String(dto.suiTxDigest).trim() !== '') {
+            const nextDigest = String(dto.suiTxDigest).trim();
+            const dupPatch = await this.prisma.sale.findFirst({
+                where: { suiTxDigest: nextDigest, NOT: { id } },
+            });
+            if (dupPatch) {
+                throw new common_1.BadRequestException('This transaction digest is already linked to another sale.');
+            }
+            const farmerIdPatch = row.userId;
+            if (!farmerIdPatch) {
+                throw new common_1.BadRequestException('Sale has no farmer account linked; cannot verify on-chain payment.');
+            }
+            await this.suiVerification.assertSalePaymentDigest({
+                digest: nextDigest,
+                farmerUserId: farmerIdPatch,
+                buyerUserId: row.buyerUserId,
+            });
+        }
+        const before = (0, sale_audit_util_1.snapshotSale)(row);
+        const data = {
+            lastUpdatedByUser: { connect: { id: auth.userId } },
+        };
         if (dto.amountPaid !== undefined)
             data.amountPaid = dto.amountPaid;
         if (dto.paymentStatus !== undefined)
@@ -206,15 +309,26 @@ let SaleService = class SaleService {
                 ? new Date(dto.creditDueDate)
                 : null;
         }
-        return this.prisma.sale.update({
+        const updated = await this.prisma.sale.update({
             where: { id },
             data,
         });
+        await this.audit.record({
+            action: 'UPDATE_SALE',
+            entityType: 'Sale',
+            entityId: String(id),
+            auth,
+            oldValue: before,
+            newValue: (0, sale_audit_util_1.snapshotSale)(updated),
+        });
+        return updated;
     }
 };
 exports.SaleService = SaleService;
 exports.SaleService = SaleService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        audit_log_service_1.AuditLogService,
+        sui_verification_service_1.SuiVerificationService])
 ], SaleService);
 //# sourceMappingURL=sale.service.js.map

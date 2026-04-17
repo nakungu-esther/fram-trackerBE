@@ -7,9 +7,12 @@ import {
 import type { Prisma, Sale } from '@prisma/client';
 import type { AuthUser } from '../auth/auth-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { PatchSaleDto } from './dto/patch-sale.dto';
 import { SaleQueryDto } from './dto/sale-query.dto';
+import { isSaleLocked, snapshotSale } from './sale-audit.util';
+import { SuiVerificationService } from '../sui/sui-verification.service';
 
 function normalizeAmountPaid(
   total: number,
@@ -32,7 +35,42 @@ function normalizeAmountPaid(
 
 @Injectable()
 export class SaleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+    private readonly suiVerification: SuiVerificationService,
+  ) {}
+
+  private async assertStockAvailable(
+    farmerUserId: string,
+    produce: string,
+    additionalQty: number,
+  ): Promise<void> {
+    if (additionalQty <= 0) {
+      throw new BadRequestException('Sale quantity must be positive');
+    }
+    const p = produce.trim();
+    const harvests = await this.prisma.procurement.findMany({
+      where: {
+        userId: farmerUserId,
+        produce: { equals: p, mode: 'insensitive' },
+      },
+    });
+    const sales = await this.prisma.sale.findMany({
+      where: {
+        userId: farmerUserId,
+        produce: { equals: p, mode: 'insensitive' },
+      },
+    });
+    const h = harvests.reduce((s, x) => s + x.quantity, 0);
+    const sold = sales.reduce((s, x) => s + x.quantity, 0);
+    const avail = h - sold;
+    if (avail + 1e-9 < additionalQty) {
+      throw new BadRequestException(
+        `Insufficient stock for "${p}". Available ~${avail.toFixed(3)} t; this sale is ${additionalQty} t.`,
+      );
+    }
+  }
 
   private async assertCreditHeadroom(
     buyerUserId: string,
@@ -114,6 +152,13 @@ export class SaleService {
       userId = auth.userId;
     }
 
+    if (dto.quantity <= 0 || !Number.isFinite(dto.quantity)) {
+      throw new BadRequestException('Sale quantity must be greater than zero');
+    }
+    if (dto.amount < 0 || !Number.isFinite(dto.amount)) {
+      throw new BadRequestException('Sale amount cannot be negative');
+    }
+
     const paymentStatus = dto.paymentStatus ?? 'paid';
     let settlementMethod =
       dto.settlementMethod ??
@@ -160,13 +205,26 @@ export class SaleService {
       }
     }
 
+    await this.assertStockAvailable(userId, dto.produce, dto.quantity);
+
+    if (settlementMethod === 'sui') {
+      const farmerRow = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!farmerRow?.suiAddress?.trim()) {
+        throw new BadRequestException(
+          'Sui settlement requires the farmer to save a Sui wallet address on their profile first.',
+        );
+      }
+    }
+
     const paid = normalizeAmountPaid(
       dto.amount,
       paymentStatus,
       dto.amountPaid,
     );
 
-    return this.prisma.sale.create({
+    const created = await this.prisma.sale.create({
       data: {
         produce: dto.produce.trim(),
         quantity: dto.quantity,
@@ -179,9 +237,21 @@ export class SaleService {
         userId,
         buyerUserId,
         procurementId: dto.procurementId ?? null,
+        createdByUserId: auth.userId,
+        lastUpdatedByUserId: auth.userId,
         ...(dto.date ? { date: new Date(dto.date) } : {}),
       },
     });
+
+    await this.audit.record({
+      action: 'CREATE_SALE',
+      entityType: 'Sale',
+      entityId: String(created.id),
+      auth,
+      newValue: snapshotSale(created),
+    });
+
+    return created;
   }
 
   async confirmSuiPayment(
@@ -206,14 +276,40 @@ export class SaleService {
       throw new BadRequestException('This transaction digest is already linked to another sale.');
     }
 
-    return this.prisma.sale.update({
+    const farmerId = row.userId;
+    if (!farmerId) {
+      throw new BadRequestException(
+        'Sale has no farmer account linked; cannot verify on-chain payment.',
+      );
+    }
+
+    await this.suiVerification.assertSalePaymentDigest({
+      digest,
+      farmerUserId: farmerId,
+      buyerUserId: row.buyerUserId,
+    });
+
+    const before = snapshotSale(row);
+    const updated = await this.prisma.sale.update({
       where: { id },
       data: {
         paymentStatus: 'paid',
         amountPaid: row.amount,
         suiTxDigest: digest,
+        lastUpdatedByUser: { connect: { id: auth.userId } },
       },
     });
+
+    await this.audit.record({
+      action: 'CONFIRM_SUI_SALE',
+      entityType: 'Sale',
+      entityId: String(id),
+      auth,
+      oldValue: before,
+      newValue: snapshotSale(updated),
+    });
+
+    return updated;
   }
 
   async patch(
@@ -233,7 +329,48 @@ export class SaleService {
       throw new ForbiddenException();
     }
 
-    const data: Prisma.SaleUpdateInput = {};
+    if (isSaleLocked(row)) {
+      throw new BadRequestException(
+        'This sale is finalized (fully paid or verified on-chain). Direct edits are disabled — record a separate adjustment or reversal entry instead.',
+      );
+    }
+
+    if (dto.amountPaid !== undefined && dto.amountPaid < 0) {
+      throw new BadRequestException('amountPaid cannot be negative');
+    }
+
+    if (
+      dto.suiTxDigest !== undefined &&
+      dto.suiTxDigest !== null &&
+      String(dto.suiTxDigest).trim() !== ''
+    ) {
+      const nextDigest = String(dto.suiTxDigest).trim();
+      const dupPatch = await this.prisma.sale.findFirst({
+        where: { suiTxDigest: nextDigest, NOT: { id } },
+      });
+      if (dupPatch) {
+        throw new BadRequestException(
+          'This transaction digest is already linked to another sale.',
+        );
+      }
+      const farmerIdPatch = row.userId;
+      if (!farmerIdPatch) {
+        throw new BadRequestException(
+          'Sale has no farmer account linked; cannot verify on-chain payment.',
+        );
+      }
+      await this.suiVerification.assertSalePaymentDigest({
+        digest: nextDigest,
+        farmerUserId: farmerIdPatch,
+        buyerUserId: row.buyerUserId,
+      });
+    }
+
+    const before = snapshotSale(row);
+
+    const data: Prisma.SaleUpdateInput = {
+      lastUpdatedByUser: { connect: { id: auth.userId } },
+    };
     if (dto.amountPaid !== undefined) data.amountPaid = dto.amountPaid;
     if (dto.paymentStatus !== undefined) data.paymentStatus = dto.paymentStatus;
     if (dto.settlementMethod !== undefined) {
@@ -248,9 +385,20 @@ export class SaleService {
         : null;
     }
 
-    return this.prisma.sale.update({
+    const updated = await this.prisma.sale.update({
       where: { id },
       data,
     });
+
+    await this.audit.record({
+      action: 'UPDATE_SALE',
+      entityType: 'Sale',
+      entityId: String(id),
+      auth,
+      oldValue: before,
+      newValue: snapshotSale(updated),
+    });
+
+    return updated;
   }
 }

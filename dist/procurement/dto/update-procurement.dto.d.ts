@@ -4,4 +4,5 @@ export declare class UpdateProcurementDto {
     farmLocation?: string;
     date?: string;
     farmId?: string | null;
+    photoDataUrl?: string | null;
 }

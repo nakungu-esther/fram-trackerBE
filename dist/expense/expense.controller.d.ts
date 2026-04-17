@@ -5,18 +5,18 @@ export declare class ExpenseController {
     private readonly expenseService;
     constructor(expenseService: ExpenseService);
     findAll(user: AuthUser): Promise<{
-        userId: string;
-        date: Date;
         id: string;
         createdAt: Date;
+        userId: string;
+        date: Date;
         amount: number;
         label: string;
     }[]>;
     create(dto: CreateExpenseDto, user: AuthUser): Promise<{
-        userId: string;
-        date: Date;
         id: string;
         createdAt: Date;
+        userId: string;
+        date: Date;
         amount: number;
         label: string;
     }>;

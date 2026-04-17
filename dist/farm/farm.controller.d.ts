@@ -5,23 +5,23 @@ export declare class FarmController {
     private readonly farmService;
     constructor(farmService: FarmService);
     findAll(user: AuthUser): Promise<{
-        userId: string;
-        name: string;
         id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
         address: string | null;
         latitude: number | null;
         longitude: number | null;
-        createdAt: Date;
-        updatedAt: Date;
     }[]>;
     create(dto: CreateFarmDto, user: AuthUser): Promise<{
-        userId: string;
-        name: string;
         id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
         address: string | null;
         latitude: number | null;
         longitude: number | null;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
 }

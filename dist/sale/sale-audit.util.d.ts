@@ -1,0 +1,22 @@
+import type { Sale } from '@prisma/client';
+export declare function isSaleLocked(row: Sale): boolean;
+export declare function snapshotSale(row: Sale): {
+    id: number;
+    produce: string;
+    quantity: number;
+    amount: number;
+    buyer: string;
+    paymentStatus: string;
+    amountPaid: number | null;
+    creditDueDate: Date | null;
+    settlementMethod: string | null;
+    suiTxDigest: string | null;
+    buyerUserId: string | null;
+    procurementId: number | null;
+    userId: string | null;
+    date: Date;
+    recordCreatedAt: Date;
+    updatedAt: Date;
+    createdByUserId: string | null;
+    lastUpdatedByUserId: string | null;
+};

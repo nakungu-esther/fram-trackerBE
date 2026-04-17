@@ -31,6 +31,47 @@ model User {
   supplyChainEvents SupplyChainEvent[]
   notificationReads NotificationRead[]
   smsLogs           SmsLog[]
+  farmDailyLogs     FarmDailyLog[]
+  auditLogs         AuditLog[]
+  salesCreated      Sale[]       @relation("SaleCreatedBy")
+  salesUpdated      Sale[]       @relation("SaleUpdatedBy")
+  procurementsCreated Procurement[] @relation("ProcurementCreatedBy")
+  procurementsUpdated Procurement[] @relation("ProcurementUpdatedBy")
+}
+
+/// Append-only trace: who changed what (integrity / remote-owner trust).
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  actorUserId String?
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorEmail  String?
+  actorName   String?
+  actorRole   String?
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+}
+
+/// Farmer-submitted daily report: activities, costs, issues, optional photo proof.
+model FarmDailyLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logDate       DateTime
+  activities    String
+  expenseNote   String?
+  expenseAmount Float?
+  issues        String?
+  photoDataUrl  String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, logDate])
 }
 
 model Farm {
@@ -58,8 +99,14 @@ model Procurement {
   userId       String?
   farmId       String?
   date         DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  photoDataUrl String?   @db.Text
+  createdByUserId     String?
+  lastUpdatedByUserId String?
   user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   farm         Farm?     @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  createdByUser     User? @relation("ProcurementCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lastUpdatedByUser User? @relation("ProcurementUpdatedBy", fields: [lastUpdatedByUserId], references: [id], onDelete: SetNull)
   sales        Sale[]
 }
 
@@ -83,7 +130,13 @@ model Sale {
   procurement    Procurement? @relation(fields: [procurementId], references: [id], onDelete: SetNull)
   userId         String?
   date           DateTime  @default(now())
+  recordCreatedAt DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdByUserId     String?
+  lastUpdatedByUserId String?
   user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdByUser     User? @relation("SaleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lastUpdatedByUser User? @relation("SaleUpdatedBy", fields: [lastUpdatedByUserId], references: [id], onDelete: SetNull)
 }
 
 model Expense {

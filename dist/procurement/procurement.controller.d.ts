@@ -7,6 +7,8 @@ export declare class ProcurementController {
     private readonly procurementService;
     constructor(procurementService: ProcurementService);
     findAll(query: ProcurementQueryDto, user: AuthUser): Promise<{
+        id: number;
+        updatedAt: Date;
         produce: string;
         quantity: number;
         price: number;
@@ -14,9 +16,13 @@ export declare class ProcurementController {
         userId: string | null;
         date: Date;
         farmId: string | null;
-        id: number;
+        photoDataUrl: string | null;
+        createdByUserId: string | null;
+        lastUpdatedByUserId: string | null;
     }[]>;
     create(dto: CreateProcurementDto, user: AuthUser): Promise<{
+        id: number;
+        updatedAt: Date;
         produce: string;
         quantity: number;
         price: number;
@@ -24,9 +30,13 @@ export declare class ProcurementController {
         userId: string | null;
         date: Date;
         farmId: string | null;
-        id: number;
+        photoDataUrl: string | null;
+        createdByUserId: string | null;
+        lastUpdatedByUserId: string | null;
     }>;
     update(id: number, dto: UpdateProcurementDto, user: AuthUser): Promise<{
+        id: number;
+        updatedAt: Date;
         produce: string;
         quantity: number;
         price: number;
@@ -34,7 +44,9 @@ export declare class ProcurementController {
         userId: string | null;
         date: Date;
         farmId: string | null;
-        id: number;
+        photoDataUrl: string | null;
+        createdByUserId: string | null;
+        lastUpdatedByUserId: string | null;
     }>;
     remove(id: number, user: AuthUser): Promise<void>;
 }

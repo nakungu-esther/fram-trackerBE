@@ -50,4 +50,10 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateProcurementDto.prototype, "farmId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(500_000),
+    __metadata("design:type", Object)
+], CreateProcurementDto.prototype, "photoDataUrl", void 0);
 //# sourceMappingURL=create-procurement.dto.js.map

@@ -5,17 +5,17 @@ export declare class SupplyChainController {
     private readonly supplyChainService;
     constructor(supplyChainService: SupplyChainService);
     findAll(user: AuthUser): Promise<{
-        userId: string | null;
         id: string;
         at: Date;
+        userId: string | null;
         saleId: string;
         stage: string;
         note: string | null;
     }[]>;
     create(dto: CreateSupplyEventDto, user: AuthUser): Promise<{
-        userId: string | null;
         id: string;
         at: Date;
+        userId: string | null;
         saleId: string;
         stage: string;
         note: string | null;

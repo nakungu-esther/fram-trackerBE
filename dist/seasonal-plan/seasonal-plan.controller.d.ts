@@ -5,20 +5,20 @@ export declare class SeasonalPlanController {
     private readonly seasonalPlanService;
     constructor(seasonalPlanService: SeasonalPlanService);
     findAll(user: AuthUser): Promise<{
-        userId: string;
-        farmId: string | null;
         id: string;
         createdAt: Date;
+        userId: string;
+        farmId: string | null;
         crop: string;
         plantDate: Date;
         expectedHarvestDate: Date;
         notes: string | null;
     }[]>;
     create(dto: CreateSeasonalPlanDto, user: AuthUser): Promise<{
-        userId: string;
-        farmId: string | null;
         id: string;
         createdAt: Date;
+        userId: string;
+        farmId: string | null;
         crop: string;
         plantDate: Date;
         expectedHarvestDate: Date;

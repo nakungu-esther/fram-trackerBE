@@ -4,6 +4,7 @@ import {
   Min,
   IsOptional,
   IsDateString,
+  MaxLength,
 } from 'class-validator';
 
 export class UpdateProcurementDto {
@@ -27,4 +28,9 @@ export class UpdateProcurementDto {
   @IsOptional()
   @IsString()
   farmId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500_000)
+  photoDataUrl?: string | null;
 }
