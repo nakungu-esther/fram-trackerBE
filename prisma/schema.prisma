@@ -37,6 +37,19 @@ model User {
   salesUpdated      Sale[]       @relation("SaleUpdatedBy")
   procurementsCreated Procurement[] @relation("ProcurementCreatedBy")
   procurementsUpdated Procurement[] @relation("ProcurementUpdatedBy")
+  passwordResetTokens PasswordResetToken[]
+}
+
+/// One-time token for password reset (raw token is emailed; only SHA-256 hash is stored).
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 /// Append-only trace: who changed what (integrity / remote-owner trust).

@@ -5,6 +5,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export declare class AuthService {
     private readonly prisma;
     private readonly jwt;
+    private readonly logger;
     constructor(prisma: PrismaService, jwt: JwtService);
     private toPublicUser;
     private signToken;
@@ -49,5 +50,14 @@ export declare class AuthService {
         phone: string;
         location: string;
         suiAddress: string;
+    }>;
+    requestPasswordReset(email: string): Promise<{
+        ok: true;
+        message: string;
+        devResetLink?: string;
+    }>;
+    private trySendPasswordResetEmail;
+    resetPasswordWithToken(token: string, password: string): Promise<{
+        ok: boolean;
     }>;
 }
